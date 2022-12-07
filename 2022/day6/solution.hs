@@ -6,14 +6,9 @@ unique = f []
     where f _ []       = True
           f acc (x:xs) | elem x acc = False
                        | otherwise  = f (x:acc) xs
+dosrann n x | length x < n = []
+            | otherwise    = take n x : dosran (tail x)
 
-solution1 :: String -> String
-solution1 = show . fst . head . filter (unique . snd) . zip [4 ..] . dosran
-    where dosran x | length x < 4 = []
-                   | otherwise    = take 4 x : dosran (tail x)
+solution1 = show . fst . head . filter (unique . snd) . zip [4 ..] . dosran 4
 
-
-solution2 :: String -> String
-solution2 = show . fst . head . filter (unique . snd) . zip [14 ..] . dosran
-    where dosran x | length x < 14 = []
-                   | otherwise    = take 14 x : dosran (tail x)
+solution2 = show . fst . head . filter (unique . snd) . zip [14 ..] . dosran 14
