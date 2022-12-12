@@ -9,9 +9,13 @@ if __name__ == "__main__":
     if os.path.exists(basepath):
         print("Directory already exists", file=sys.stderr)
     os.mkdir(basepath)
-    with open(basepath+"build.bat", "w") as f: f.write("ghc -o solution.exe solution.hs -no-keep-o-files -no-keep-hi-files")
-    with open(basepath+"build.sh", "w") as f: f.write("ghc -o solution solution.hs -no-keep-o-files -no-keep-hi-files")
-    with open(basepath+"test.txt", "w") as f: f.write("")
-    with open(basepath+"input.txt", "w") as f: f.write("")
-    with open(basepath+"solution.hs", "w") as f: f.write("module Main where\nmain = interact solution1\nsolution1 = const \"yeet\"")
-    
+    with open(basepath+"build.bat", "w") as f:
+        f.write("ghc -o solution.exe solution.hs -no-keep-o-files -no-keep-hi-files")
+    with open(basepath+"build.sh", "w") as f:
+        f.write("set -xe\nghc -o solution solution.hs -no-keep-o-files -no-keep-hi-files")
+    with open(basepath+"test.txt", "w") as f:
+        f.write("")
+    with open(basepath+"input.txt", "w") as f:
+        f.write("")
+    with open(basepath+"solution.hs", "w") as f:
+        f.write("module Main where\nmain = interact solution1\nsolution1 = const \"yeet\"")
