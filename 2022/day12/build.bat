@@ -1,0 +1,1 @@
+nim cpp --threads:on --app:console -o:"solution.exe" solution.nim
