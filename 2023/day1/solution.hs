@@ -3,7 +3,7 @@ import Data.Char (isDigit)
 import Data.List (singleton)
 main = interact solution2
 
---------------------------------- Solution 2 ----------------------------------
+--------------------------------- Solution 1 ----------------------------------
 ends (x:[])   = [x, x]
 ends (x:y:[]) = [x, y]
 ends (x:_:xs) = ends (x:xs)
