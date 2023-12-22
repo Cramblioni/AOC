@@ -1,0 +1,1 @@
+ghc -o solution.exe solution.hs -no-keep-o-files -no-keep-hi-files
