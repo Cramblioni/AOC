@@ -29,13 +29,22 @@ pub fn main() !void {
     }
     // cleanup file stuff
     source_file.close();
-    // sort both lists
-    std.sort.heap(u32, list_a.items, void{}, std.sort.asc(u32));
-    std.sort.heap(u32, list_b.items, void{}, std.sort.asc(u32));
-    // pair them up
+    // count the right list
+    var map = std.AutoHashMap(u32, u32).init(GPA);
+    defer map.deinit();
+
+    for (list_b.items) |b| {
+        const entry = try map.getOrPut(b);
+        if (entry.found_existing) {
+            entry.value_ptr.* += 1;
+        } else {
+            entry.value_ptr.* = 1;
+        }
+    }
     var total: u32 = 0;
-    for (list_a.items, list_b.items) |a, b| {
-        total += diff(a, b);
+    for (list_a.items) |a| {
+        const count = if (map.getPtr(a)) |x| x.* else 0;
+        total += a * count;
     }
     try std.io.getStdOut().writer().print("{}\n", .{total});
 }
@@ -46,8 +55,4 @@ fn strToInt(inp: []const u8) u32 {
     for (inp) |char|
         out = out * 10 + (char - '0');
     return out;
-}
-
-fn diff(a: u32, b: u32) u32 {
-    if (a > b) return a - b else return b - a;
 }
