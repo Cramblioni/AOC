@@ -3,7 +3,7 @@ const std = @import("std");
 var AllocState = std.heap.GeneralPurposeAllocator(.{}){};
 const GPA = AllocState.allocator();
 
-const TESTING = true;
+const TESTING = false;
 const SIZE: usize = if (TESTING) 12 else 50;
 
 pub fn main() !void {
@@ -54,10 +54,7 @@ pub fn main() !void {
     }
 
     var count: usize = 0;
-    for (base.inner) |c| count += @intFromBool(c == Grid.ANTINODE);
-    for (0..SIZE) |r| {
-        std.debug.print("{s}\n", .{base.inner[r * SIZE .. r * SIZE + SIZE]});
-    }
+    for (base.inner) |c| count += @intFromBool(c != Grid.EMPTY);
     std.debug.print("{}\n", .{count});
 }
 
