@@ -3,7 +3,7 @@ const std = @import("std");
 var AllocState = std.heap.GeneralPurposeAllocator(.{}){};
 const GPA = AllocState.allocator();
 
-const TESTING = true;
+const TESTING = false;
 
 const INPLEN: usize = (if (TESTING) 19 else 19_999);
 
@@ -25,63 +25,116 @@ pub fn main() !void {
     defer GPA.free(map);
     GPA.destroy(contents);
 
-    for (map) |cell| if (cell == EMPTY)
-        std.debug.print(".", .{})
-    else
-        std.debug.print("{}", .{cell});
-    std.debug.print("\n", .{});
+    //showBlocks(map);
+    const new_map = try reduce(map);
+    defer GPA.free(new_map);
+    //showBlocks(new_map);
 
-    reduce(map);
-
-    var acc: usize = 0;
-    for (0.., map) |i, cell| {
-        if (cell == EMPTY) break;
-        acc += @as(usize, cell) * i;
+    var base: usize = 0;
+    var checksum: usize = 0;
+    for (new_map) |block| {
+        for (base..base + block.len) |i| checksum += i * block.id.?;
+        base += block.len;
     }
-    std.debug.print("{}\n", .{acc});
+    std.debug.print("{}\n", .{checksum});
 }
 
-const EMPTY: u16 = 0xFFFF;
-fn expand(inp: *const [INPLEN]u8) ![]u16 {
-    var size: usize = 0;
-    for (inp) |c| size += c;
+const Block = struct { id: ?u16 = null, len: u8 };
 
-    const buff = try GPA.alloc(u16, size);
-    errdefer GPA.free(buff);
+fn expand(inp: *const [INPLEN]u8) ![]Block {
+    var out = std.ArrayList(Block).init(GPA);
+    defer out.deinit();
 
-    var ind: usize = 0;
     var id: u16 = 0;
     for (0.., inp) |i, val| {
         if (i & 1 == 0) {
-            shozzle(buff, val, id, &ind);
+            try out.append(.{ .id = id, .len = val });
             id += 1;
         } else {
-            shozzle(buff, val, EMPTY, &ind);
+            try out.append(.{ .len = val });
         }
     }
-    return buff;
+    return try out.toOwnedSlice();
 }
 
-fn shozzle(buff: []u16, rep: u8, val: u16, ind: *usize) void {
-    for (0..rep) |_| {
-        buff[ind.*] = val;
-        ind.* += 1;
+const BlockDeque = std.DoublyLinkedList(Block);
+fn reduce(blocks: []Block) ![]Block {
+    var arena_state = std.heap.ArenaAllocator.init(GPA);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    // creating deque
+    var block_deque = BlockDeque{};
+    for (blocks) |block| {
+        const node = try arena.create(BlockDeque.Node);
+        node.data = block;
+        block_deque.append(node);
     }
+
+    var out = try std.ArrayList(Block).initCapacity(GPA, blocks.len);
+    defer out.deinit();
+
+    while (block_deque.first) |head| {
+        if (head.data.id != null) {
+            // squish checking
+            if (head.next) |next| if (next.data.id == head.data.id) {
+                head.data.len += next.data.len;
+                head.next = next.next; // squishing
+                block_deque.len -= 1;
+                continue;
+            };
+            // Head is a full block and not to be squished
+            out.appendAssumeCapacity(head.data);
+            _ = block_deque.popFirst();
+            continue;
+        }
+        // head is empty
+        if (block_deque.len == 1) break; // We ignore trailing empty block
+
+        const tail = block_deque.last.?; // This shouldn't be null
+        if (tail.data.id == null) {
+            // If we encounter an empty block, skip it.
+            _ = block_deque.pop();
+            continue;
+        }
+        if (tail.data.len == head.data.len) {
+            // If we can directly substitue,
+            //      then replace head and redo this step
+            _ = block_deque.popFirst();
+            block_deque.prepend(block_deque.pop().?);
+            continue;
+        }
+
+        if (tail.data.len > head.data.len) {
+            // Split tail into two then
+            //  Replace head filled with tail
+            //  Replace tail with remaining parts
+            _ = block_deque.popFirst(); // head
+            const new_head_block = Block{ .id = tail.data.id, .len = head.data.len };
+            tail.data.len -= head.data.len; // replacing the last len
+            const new_head = try arena.create(BlockDeque.Node);
+            new_head.data = new_head_block;
+            block_deque.prepend(new_head);
+            continue;
+        }
+
+        if (tail.data.len < head.data.len) {
+            // Split head into two
+            //  Fill replace the first part with tail
+            head.data.len -= tail.data.len;
+            _ = block_deque.pop();
+            block_deque.prepend(tail);
+            continue;
+        }
+    }
+    return try out.toOwnedSlice();
 }
 
-fn reduce(buff: []u16) void {
-    if (buff.len == 0) return;
-    var bound: usize = 0;
-    for (buff) |cell| if (cell != EMPTY) {
-        bound += 1;
-    };
-
-    var write: usize = 0;
-    var pull: usize = buff.len - 1;
-    while (write + 2 < bound) {
-        while (buff[write] != EMPTY) write += 1;
-        buff[write] = buff[pull];
-        buff[pull] = EMPTY;
-        while (buff[pull] == EMPTY) pull -= 1;
+fn showBlocks(blocks: []Block) void {
+    for (blocks) |block| {
+        if (block.id) |id| {
+            std.debug.print("[{x:0>2}*{}] ", .{ id, block.len });
+        } else std.debug.print("[.*{}] ", .{block.len});
     }
+    std.debug.print("\n", .{});
 }
