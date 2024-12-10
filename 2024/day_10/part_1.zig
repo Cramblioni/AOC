@@ -3,7 +3,7 @@ const std = @import("std");
 var AllocState = std.heap.GeneralPurposeAllocator(.{}){};
 const GPA = AllocState.allocator();
 
-const TESTING = true;
+const TESTING = false;
 
 const SIZE: usize = if (TESTING) 8 else 53;
 
@@ -27,8 +27,13 @@ pub fn main() !void {
         for (grid) |*c| c.* -= '0';
     }
 
-    const score = try follow(grid, 0, 2);
-    std.debug.print("1 score: {}\n", .{score});
+    var score: usize = 0;
+    for (0..SIZE) |r| for (0..SIZE) |c| {
+        if (grid[r * SIZE + c] != 0) continue;
+        const res = try follow(grid, @intCast(r), @intCast(c));
+        score += res;
+    };
+    std.debug.print("\nscore: {}\n", .{score});
 }
 
 const Pos = struct {
@@ -90,22 +95,22 @@ fn follow(grid: *const Grid, r: u32, c: u32) !usize {
                 open_set.appendAssumeCapacity(new);
         }
     }
-    std.log.debug("printing", .{});
+    //std.log.debug("printing", .{});
     var score: usize = 0;
     for (0..SIZE) |mr| {
         for (0..SIZE) |mc| {
             if (closed_set[mr * SIZE + mc]) {
                 if (grid[mr * SIZE + mc] == 9) score += 1;
-                std.debug.print("\x1b[7m{}\x1b[27m", .{grid[mr * SIZE + mc]});
-            } else std.debug.print("{}", .{grid[mr * SIZE + mc]});
+                //std.debug.print("\x1b[7m{}\x1b[27m", .{grid[mr * SIZE + mc]});
+            } // else std.debug.print("{}", .{grid[mr * SIZE + mc]});
         }
-        std.debug.print("\n", .{});
+        //std.debug.print("\n", .{});
     }
     return score;
 }
 
 fn validMove(from: u8, to: u8) bool {
-    if (from > to) return from - to == 1 else return to - from == 1;
+    if (from > to) return false else return to - from == 1;
 }
 fn dif(from: anytype, to: @TypeOf(from)) @TypeOf(from) {
     if (from > to) return from - to else return to - from;
